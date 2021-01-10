@@ -8,6 +8,18 @@ jobs:
   test:
     name: lint and type check
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      SERVER_PORT: 8080
+      API_ORIGIN: http://localhost:8080
+      BASE_PATH: /api
     steps:
       - uses: actions/checkout@v2
       - name: setup Node.js
@@ -29,10 +41,9 @@ jobs:
       - run: yarn install --cwd server
         if: steps.server-yarn-cache.outputs.cache-hit != 'true'
       - run: yarn lint
-      - run: |
-          sudo systemctl start mysql.service
-          echo "DATABASE_URL=mysql://root:root@localhost:3306/test" > server/prisma/.env
+      - run: echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test" > server/prisma/.env
       - run: yarn typecheck
+      - run: yarn test
 
   deploy:
     name: deploy with rsync
